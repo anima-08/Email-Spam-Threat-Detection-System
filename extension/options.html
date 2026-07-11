@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpamShield — Settings</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="options.css"/>
+</head>
+<body>
+
+  <div class="page">
+
+    <!-- Header -->
+    <header class="page-header">
+      <img src="icons/icon48.png" alt="" class="page-logo"/>
+      <div>
+        <h1 class="page-title">SpamShield Settings</h1>
+        <p class="page-sub">Configure how the extension behaves</p>
+      </div>
+    </header>
+
+    <!-- Saved toast -->
+    <div id="toast" class="toast hidden">✓ Settings saved</div>
+
+    <!-- ── Section: Backend ───────────────────────────────── -->
+    <section class="settings-section">
+      <h2 class="section-title">🔗 Backend Connection</h2>
+
+      <div class="field">
+        <label class="field-label" for="backend-url">Backend URL</label>
+        <p class="field-desc">Change this when you deploy the Flask server (e.g. on Render).</p>
+        <div class="input-row">
+          <input type="url" id="backend-url" class="text-input" placeholder="http://localhost:5000" />
+          <button id="btn-test" class="btn-test">Test</button>
+        </div>
+        <p id="backend-status-msg" class="status-msg"></p>
+      </div>
+    </section>
+
+    <!-- ── Section: Detection ─────────────────────────────── -->
+    <section class="settings-section">
+      <h2 class="section-title">🧠 Detection</h2>
+
+      <div class="field">
+        <label class="field-label" for="threshold-slider">Spam Threshold
+          <span class="field-badge" id="threshold-label">50%</span>
+        </label>
+        <p class="field-desc">
+          Emails with spam probability <strong>above</strong> this threshold are classified as Spam.
+          Lower = stricter (more emails flagged). Default: 50%.
+        </p>
+        <input type="range" id="threshold-slider" min="20" max="80" step="5" value="50" class="slider"/>
+        <div class="slider-labels">
+          <span>Strict (20%)</span>
+          <span>Relaxed (80%)</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Section: Automation ───────────────────────────── -->
+    <section class="settings-section">
+      <h2 class="section-title">⚡ Automation</h2>
+
+      <div class="toggle-field">
+        <div class="toggle-text">
+          <span class="toggle-label">Auto-scan</span>
+          <span class="toggle-desc">Automatically analyze emails when you open them in Gmail. No need to click "Scan".</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="auto-scan-toggle" checked/>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="toggle-field">
+        <div class="toggle-text">
+          <span class="toggle-label">Browser Notifications</span>
+          <span class="toggle-desc">Show a Chrome notification when a <strong>High</strong> or <strong>Critical</strong> threat is detected.</span>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="notifications-toggle" checked/>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+    </section>
+
+    <!-- ── Section: Data ─────────────────────────────────── -->
+    <section class="settings-section">
+      <h2 class="section-title">🗂 Data</h2>
+
+      <div class="field">
+        <label class="field-label">Scan History</label>
+        <p class="field-desc">Stores the last 20 scanned emails locally on your device. No data is sent anywhere except the Flask backend you configured above.</p>
+        <button id="btn-clear-history" class="btn-danger">Clear Scan History</button>
+        <span id="clear-confirm" class="clear-confirm hidden">History cleared ✓</span>
+      </div>
+    </section>
+
+    <!-- Save -->
+    <div class="save-row">
+      <button id="btn-save" class="btn-save">Save Settings</button>
+    </div>
+
+  </div>
+
+  <script src="config.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

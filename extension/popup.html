@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpamShield</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+
+  <!-- ── Header ─────────────────────────────────────────────── -->
+  <header class="header">
+    <div class="header-left">
+      <img src="icons/icon48.png" alt="" class="header-logo" />
+      <div class="header-brand-text">
+        <span class="header-title">SpamShield</span>
+        <span id="auto-scan-badge" class="auto-badge hidden">AUTO</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="backend-dot" class="backend-dot" title="Checking backend…"></div>
+      <button id="btn-settings" class="icon-btn" title="Settings">⚙️</button>
+    </div>
+  </header>
+
+  <!-- ── Tab Navigation ─────────────────────────────────────── -->
+  <nav class="tab-nav" role="tablist">
+    <button class="tab-btn active" id="tab-results-btn" data-tab="results" role="tab" aria-selected="true">Results</button>
+    <button class="tab-btn" id="tab-history-btn" data-tab="history" role="tab" aria-selected="false">
+      History
+      <span id="history-count" class="tab-count hidden"></span>
+    </button>
+  </nav>
+
+  <!-- ══════════════════════════════════════════════════════════
+       RESULTS TAB
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-results" class="tab-panel" role="tabpanel">
+
+    <!-- IDLE -->
+    <section id="state-idle" class="state-panel">
+      <div class="state-icon">📧</div>
+      <p class="state-title">No analysis yet</p>
+      <p class="state-desc">Open an email in Gmail, then click <strong>Scan Email</strong>.</p>
+      <button id="btn-scan-idle" class="btn-primary">Scan Email</button>
+    </section>
+
+    <!-- LOADING -->
+    <section id="state-loading" class="state-panel hidden" aria-busy="true">
+      <div class="spinner-wrap">
+        <div class="spinner-ring"></div>
+        <img src="icons/icon48.png" alt="" class="spinner-logo" />
+      </div>
+      <p class="state-title">Analyzing…</p>
+      <p class="state-desc">Extracting content &amp; running detection model.</p>
+    </section>
+
+    <!-- ERROR -->
+    <section id="state-error" class="state-panel hidden" aria-live="assertive">
+      <div class="state-icon">⚠️</div>
+      <p class="state-title">Something went wrong</p>
+      <p id="error-message" class="state-desc error-text"></p>
+      <button id="btn-retry" class="btn-primary">Try Again</button>
+    </section>
+
+    <!-- RESULTS -->
+    <section id="state-results" class="results-panel hidden">
+
+      <!-- Verdict banner -->
+      <div id="verdict-banner" class="verdict-banner">
+        <span id="verdict-icon" class="verdict-icon"></span>
+        <div class="verdict-info">
+          <span id="verdict-label" class="verdict-label"></span>
+          <div class="verdict-meta">
+            <span id="risk-badge" class="risk-badge"></span>
+            <span id="sender-display" class="sender-display"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics row -->
+      <div class="metrics-row">
+        <div class="metric-card">
+          <span id="spam-prob" class="metric-value">—</span>
+          <span class="metric-label">Spam Prob.</span>
+        </div>
+        <div class="metric-card">
+          <span id="confidence" class="metric-value">—</span>
+          <span class="metric-label">Confidence</span>
+        </div>
+        <div class="metric-card meter-card">
+          <div class="meter-header">
+            <span class="metric-label">Threat Score</span>
+            <span id="threat-score" class="metric-value threat-val">—</span>
+          </div>
+          <div class="meter-track">
+            <div id="meter-fill" class="meter-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sender Analysis (collapsible) -->
+      <div id="sender-section" class="collapsible-card hidden">
+        <button class="collapsible-header" aria-expanded="false" data-target="sender-body">
+          <span>👤 Sender Analysis</span>
+          <span id="sender-flag-count" class="flag-badge"></span>
+          <span class="chevron">›</span>
+        </button>
+        <div id="sender-body" class="collapsible-body hidden">
+          <p id="sender-email-display" class="sender-email-text"></p>
+          <ul id="sender-flags-list" class="flags-list"></ul>
+        </div>
+      </div>
+
+      <!-- Suspicious Keywords (collapsible) -->
+      <div id="keywords-section" class="collapsible-card hidden">
+        <button class="collapsible-header" aria-expanded="false" data-target="keywords-body">
+          <span>🚩 Suspicious Keywords</span>
+          <span id="kw-count" class="flag-badge orange"></span>
+          <span class="chevron">›</span>
+        </button>
+        <div id="keywords-body" class="collapsible-body hidden">
+          <div id="keywords-chips" class="chips-row"></div>
+          <div id="email-preview" class="email-preview"></div>
+        </div>
+      </div>
+
+      <!-- URLs (collapsible) -->
+      <div id="urls-section" class="collapsible-card hidden">
+        <button class="collapsible-header" aria-expanded="false" data-target="urls-body">
+          <span>🔗 URLs Detected</span>
+          <span id="url-count" class="flag-badge red"></span>
+          <span class="chevron">›</span>
+        </button>
+        <div id="urls-body" class="collapsible-body hidden">
+          <ul id="urls-list" class="urls-list"></ul>
+        </div>
+      </div>
+
+      <!-- All clear -->
+      <div id="clean-card" class="clean-card hidden">
+        <span>✅</span>
+        <span>No suspicious sender flags, keywords, or URLs detected.</span>
+      </div>
+
+      <!-- Feedback -->
+      <div id="feedback-row" class="feedback-row hidden">
+        <span class="feedback-label">Was this correct?</span>
+        <button id="btn-agree" class="feedback-btn agree">✓ Yes</button>
+        <button id="btn-wrong" class="feedback-btn wrong">✗ No</button>
+        <span id="feedback-thanks" class="feedback-thanks hidden">Thanks! 🙏</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="actions-row">
+        <button id="btn-copy" class="btn-ghost">📋 Copy Report</button>
+        <button id="btn-rescan" class="btn-secondary">↺ Re-scan</button>
+      </div>
+
+    </section>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       HISTORY TAB
+  ══════════════════════════════════════════════════════════ -->
+  <div id="tab-history" class="tab-panel hidden" role="tabpanel">
+    <div id="history-empty" class="state-panel">
+      <div class="state-icon">🕐</div>
+      <p class="state-title">No history yet</p>
+      <p class="state-desc">Scan some emails and they'll appear here.</p>
+    </div>
+    <div id="history-list" class="history-list hidden"></div>
+    <div id="history-footer" class="history-footer hidden">
+      <button id="btn-clear-history" class="btn-ghost danger">🗑 Clear History</button>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
