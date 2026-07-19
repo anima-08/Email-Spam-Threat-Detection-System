@@ -54,6 +54,13 @@ const $feedbackThanks = document.getElementById("feedback-thanks");
 const $btnAgree      = document.getElementById("btn-agree");
 const $btnWrong      = document.getElementById("btn-wrong");
 
+const $phishingSection = document.getElementById("phishing-section");
+const $phishingCount   = document.getElementById("phishing-count");
+const $phishingList    = document.getElementById("phishing-list");
+
+const $explainSection  = document.getElementById("explain-section");
+const $explainList     = document.getElementById("explain-list");
+
 const $btnScanIdle = document.getElementById("btn-scan-idle");
 const $btnRetry    = document.getElementById("btn-retry");
 const $btnRescan   = document.getElementById("btn-rescan");
@@ -132,7 +139,7 @@ async function getSettings() {
 }
 
 // ── Rendering ─────────────────────────────────────────────────────
-const RISK_CLASS = { Low: "risk-low", Medium: "risk-medium", High: "risk-high", Critical: "risk-critical" };
+const RISK_CLASS = { Low: "risk-low", Moderate: "risk-moderate", Medium: "risk-medium", High: "risk-high", Critical: "risk-critical" };
 
 function renderResults(data, subject, body, sender, historyId) {
   currentResult  = { data, subject, body, sender };
@@ -204,8 +211,37 @@ function renderResults(data, subject, body, sender, historyId) {
     $urlsSection.classList.add("hidden");
   }
 
+  // Phishing patterns
+  const phishingPatterns = data.phishing_patterns || [];
+  if (phishingPatterns.length > 0) {
+    $phishingSection.classList.remove("hidden");
+    $phishingCount.textContent = phishingPatterns.length;
+    $phishingList.innerHTML = phishingPatterns.map(renderPhishingPattern).join("");
+    // Auto-expand for High/Critical
+    const topSeverity = phishingPatterns[0]?.severity;
+    if (topSeverity === "High" || topSeverity === "Critical") {
+      const hdr = $phishingSection.querySelector(".collapsible-header");
+      hdr.setAttribute("aria-expanded", "true");
+      document.getElementById("phishing-body").classList.remove("hidden");
+    }
+  } else {
+    $phishingSection.classList.add("hidden");
+  }
+
+  // Explanation
+  const explanation = data.explanation || [];
+  if (explanation.length > 0) {
+    $explainSection.classList.remove("hidden");
+    $explainList.innerHTML = explanation
+      .map(e => `<li class="explain-item">${escHtml(e)}</li>`)
+      .join("");
+  } else {
+    $explainSection.classList.add("hidden");
+  }
+
   // Clean card
-  const hasSignals = senderFlags.length > 0 || keywords.length > 0 || urls.length > 0;
+  const hasSignals = senderFlags.length > 0 || keywords.length > 0
+    || urls.length > 0 || phishingPatterns.length > 0;
   $cleanCard.classList.toggle("hidden", hasSignals);
 
   // Feedback
@@ -215,6 +251,25 @@ function renderResults(data, subject, body, sender, historyId) {
   $btnWrong.disabled = false;
 
   showResultsState("results");
+}
+
+function renderPhishingPattern(p) {
+  const sevClass = {
+    "Critical": "phish-critical",
+    "High":     "phish-high",
+    "Medium":   "phish-medium",
+    "Low":      "phish-low",
+  }[p.severity] || "phish-low";
+  const kws = (p.matched_keywords || []).map(k => `<span class="kw-chip">${escHtml(k)}</span>`).join("");
+  return `
+    <div class="phishing-pattern ${sevClass}">
+      <div class="phishing-header">
+        <span class="phishing-label">${escHtml(p.label)}</span>
+        <span class="phishing-severity ${sevClass}-badge">${escHtml(p.severity)}</span>
+      </div>
+      <p class="phishing-explanation">${escHtml(p.explanation)}</p>
+      ${kws ? `<div class="phishing-keywords">${kws}</div>` : ""}
+    </div>`;
 }
 
 function renderUrlItem(u) {
@@ -333,15 +388,27 @@ $btnCopy.addEventListener("click", () => {
     `Threat Score:${data.threat_score}/100`,
     `Risk Level:  ${data.risk_level}`,
   ];
-  if (data.sender_flags?.length) {
-    lines.push("Sender Flags: " + data.sender_flags.join("; "));
+  if (data.phishing_patterns?.length) {
+    lines.push("Phishing:    " + data.phishing_patterns.map(p => p.label).join("; "));
   }
-  if (data.suspicious_keywords?.length) {
+  if (data.sender_flags?.length) {
+    lines.push("Sender Flags:" + data.sender_flags.join("; "));
+  }
+  if (data.spam_signals?.length) {
+    const topSigs = data.spam_signals.slice(0, 6).map(s => s.phrase);
+    lines.push("Spam Signals:" + topSigs.join(", ") + (data.spam_signals.length > 6 ? "…" : ""));
+  } else if (data.suspicious_keywords?.length) {
     lines.push("Keywords:    " + data.suspicious_keywords.join(", "));
   }
   if (data.urls?.length) {
     lines.push("URLs:        " + data.urls.map(u => `${u.url} [${u.verdict}]`).join(" | "));
   }
+  if (data.explanation?.length) {
+    lines.push("");
+    lines.push("Why Flagged:");
+    data.explanation.forEach(e => lines.push("  • " + e));
+  }
+  lines.push("");
   lines.push("Generated:   " + new Date().toLocaleString());
   navigator.clipboard.writeText(lines.join("\n")).then(() => {
     $btnCopy.textContent = "✅ Copied!";

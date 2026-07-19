@@ -42,7 +42,7 @@
     <section id="state-idle" class="state-panel">
       <div class="state-icon">📧</div>
       <p class="state-title">No analysis yet</p>
-      <p class="state-desc">Open an email in Gmail, then click <strong>Scan Email</strong>.</p>
+      <p class="state-desc">Open an email in Gmail or Outlook, then click <strong>Scan Email</strong>.</p>
       <button id="btn-scan-idle" class="btn-primary">Scan Email</button>
     </section>
 
@@ -138,10 +138,33 @@
         </div>
       </div>
 
+      <!-- Phishing Patterns (collapsible) -->
+      <div id="phishing-section" class="collapsible-card hidden">
+        <button class="collapsible-header" aria-expanded="false" data-target="phishing-body">
+          <span>🎣 Phishing Patterns</span>
+          <span id="phishing-count" class="flag-badge red"></span>
+          <span class="chevron">›</span>
+        </button>
+        <div id="phishing-body" class="collapsible-body hidden">
+          <div id="phishing-list" class="phishing-list"></div>
+        </div>
+      </div>
+
+      <!-- Why Flagged (collapsible) -->
+      <div id="explain-section" class="collapsible-card hidden">
+        <button class="collapsible-header" aria-expanded="false" data-target="explain-body">
+          <span>💡 Why Flagged</span>
+          <span class="chevron">›</span>
+        </button>
+        <div id="explain-body" class="collapsible-body hidden">
+          <ul id="explain-list" class="explain-list"></ul>
+        </div>
+      </div>
+
       <!-- All clear -->
       <div id="clean-card" class="clean-card hidden">
         <span>✅</span>
-        <span>No suspicious sender flags, keywords, or URLs detected.</span>
+        <span>No suspicious sender flags, keywords, URLs, or phishing patterns detected.</span>
       </div>
 
       <!-- Feedback -->
