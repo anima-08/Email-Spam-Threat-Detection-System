@@ -37,7 +37,7 @@ IBM/
 │   ├── popup.html / popup.js / popup.css   Main UI
 │   └── options.html / options.js  Settings page
 │
-└── antigravity_upload/backend/    Python Flask API
+└── backend/    Python Flask API
     ├── app.py                     Main Flask app, /predict endpoint
     ├── requirements.txt
     ├── models/                    5 trained .pkl artifacts
@@ -68,7 +68,7 @@ IBM/
 ### 1. Start the Backend
 
 ```bash
-cd antigravity_upload/backend
+cd backend
 
 # Create & activate virtual environment (first time only)
 python -m venv venv
@@ -171,7 +171,7 @@ Returns continual-learning status: sample count, last retrain timestamp, next re
 ## Running Tests
 
 ```bash
-cd antigravity_upload/backend
+cd backend
 python tests/test_backend.py
 # 35 tests: spam language, phishing, structural, attachment, URL, scoring, integration
 ```

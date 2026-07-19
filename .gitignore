@@ -25,6 +25,5 @@ Thumbs.db
 
 # Antigravity IDE internal files (never commit these)
 ANTIGRAVITY_PROMPT.md
-antigravity_upload/ANTIGRAVITY_PROMPT.md
-antigravity_upload/PROJECT_CONTEXT.md
+PROJECT_CONTEXT.md
 extension/EXTENSION_README.md

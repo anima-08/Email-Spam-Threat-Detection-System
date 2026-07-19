@@ -22,17 +22,14 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r backend/requirements.txt
           pip install pytest bandit
 
       - name: Run tests
         run: |
-          if [ -d tests ] || ls test_*.py 1> /dev/null 2>&1; then
-            pytest --maxfail=1 --disable-warnings -q
-          else
-            echo "No tests found yet — skipping (add tests/ folder to enable)"
-          fi
+          cd backend
+          pytest tests/ --maxfail=1 --disable-warnings -q
 
       - name: Run security scan (Bandit)
         run: |
-          bandit -r . -x ./tests,./venv,./env -f screen || true
+          bandit -r backend/ -x backend/tests,backend/venv,backend/env -f screen || true

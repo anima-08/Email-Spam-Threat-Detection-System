@@ -5,7 +5,7 @@ echo   SpamShield - Starting Backend
 echo ================================
 echo.
 
-cd /d "c:\Users\tyagi\OneDrive\Desktop\IBM\antigravity_upload\backend"
+cd /d "c:\Users\tyagi\OneDrive\Desktop\IBM\backend"
 
 :: Check if venv exists, if not create it
 if not exist "venv\Scripts\activate.bat" (
