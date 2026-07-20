@@ -150,11 +150,31 @@ def predict():
     # Unified Risk (Safety Net Approach)
     # We take the MAXIMUM of the ML probability and the Heuristic Threat Score.
     # This ensures that a strong Spam signal from ONE system isn't diluted by a low score from the OTHER system.
-    spam_probability = max(raw_spam_probability, threat_score / 100.0)
+    # Weighted combination
+    spam_probability = (
+    0.7 * raw_spam_probability +
+    0.3 * (threat_score / 100.0)
+)
+
     confidence = max(spam_probability, 1.0 - spam_probability)
     
-    ml_label = 'Spam' if raw_spam_probability >= 0.50 else 'Ham'
-    final_label = 'Spam' if spam_probability >= 0.50 else 'Ham'
+    ml_label = "Spam" if raw_spam_probability >= 0.50 else "Ham"
+
+    if spam_probability >= 0.80:
+       final_label = "Spam"
+       risk_level = "High"
+
+    elif spam_probability >= 0.60:
+         final_label = "Spam"
+         risk_level = "Moderate"
+
+    elif spam_probability >= 0.36:
+         final_label = "Ham"
+         risk_level = "Low"
+
+    else:
+         final_label = "Ham"
+         risk_level = "Safe"
     
     if manual_override_label:
         final_label = manual_override_label
