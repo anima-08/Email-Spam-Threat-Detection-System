@@ -1,8 +1,3 @@
-/**
- * options.js — Settings page logic.
- * Reads/writes from chrome.storage.sync so settings survive browser restarts.
- */
-
 "use strict";
 
 const $backendUrl    = document.getElementById("backend-url");
@@ -17,7 +12,6 @@ const $btnClearHistory = document.getElementById("btn-clear-history");
 const $clearConfirm    = document.getElementById("clear-confirm");
 const $toast           = document.getElementById("toast");
 
-// ── Load saved settings ───────────────────────────────────────────
 chrome.storage.sync.get(CONFIG.DEFAULTS, (stored) => {
   $backendUrl.value        = stored.backendUrl || CONFIG.BACKEND_URL;
   $autoScanToggle.checked  = stored.autoScan  ?? CONFIG.DEFAULTS.autoScan;
@@ -29,12 +23,10 @@ chrome.storage.sync.get(CONFIG.DEFAULTS, (stored) => {
   $thresholdLabel.textContent = pct + "%";
 });
 
-// ── Slider live preview ───────────────────────────────────────────
 $thresholdSlider.addEventListener("input", () => {
   $thresholdLabel.textContent = $thresholdSlider.value + "%";
 });
 
-// ── Test connection ───────────────────────────────────────────────
 $btnTest.addEventListener("click", async () => {
   const url = $backendUrl.value.trim().replace(/\/$/, "");
   $backendStatus.textContent = "Testing…";
@@ -55,7 +47,6 @@ $btnTest.addEventListener("click", async () => {
   }
 });
 
-// ── Save settings ─────────────────────────────────────────────────
 $btnSave.addEventListener("click", () => {
   const settings = {
     backendUrl:       $backendUrl.value.trim().replace(/\/$/, "") || CONFIG.BACKEND_URL,
@@ -69,7 +60,6 @@ $btnSave.addEventListener("click", () => {
   });
 });
 
-// ── Clear history ─────────────────────────────────────────────────
 $btnClearHistory.addEventListener("click", () => {
   chrome.storage.local.set({ history: [], lastResult: null }, () => {
     $clearConfirm.classList.remove("hidden");
@@ -77,7 +67,6 @@ $btnClearHistory.addEventListener("click", () => {
   });
 });
 
-// ── Toast ─────────────────────────────────────────────────────────
 function showToast() {
   $toast.classList.remove("hidden");
   setTimeout(() => $toast.classList.add("hidden"), 2200);

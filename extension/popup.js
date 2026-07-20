@@ -1,19 +1,5 @@
-/**
- * popup.js — SpamShield v2 popup controller.
- *
- * Features:
- *  - On open: immediately load last result from storage (instant display)
- *  - Tab switching: Results ↔ History
- *  - Collapsible sections (sender, keywords, URLs)
- *  - User feedback (agree/wrong)
- *  - Copy report to clipboard
- *  - Backend health dot
- *  - Auto-scan badge from settings
- */
-
 "use strict";
 
-// ── DOM refs ──────────────────────────────────────────────────────
 const $idle    = document.getElementById("state-idle");
 const $loading = document.getElementById("state-loading");
 const $error   = document.getElementById("state-error");
@@ -73,11 +59,9 @@ const $historyFooter = document.getElementById("history-footer");
 const $btnClearHistory = document.getElementById("btn-clear-history");
 const $historyCount  = document.getElementById("history-count");
 
-// ── State ────────────────────────────────────────────────────────
 let currentResult = null;
 let currentHistoryId = null;
 
-// ── State machine ─────────────────────────────────────────────────
 function showResultsState(name) {
   [$idle, $loading, $error, $results].forEach(el => el.classList.add("hidden"));
   if (name === "idle")    $idle.classList.remove("hidden");
@@ -86,7 +70,6 @@ function showResultsState(name) {
   if (name === "results") $results.classList.remove("hidden");
 }
 
-// ── Tab switching ─────────────────────────────────────────────────
 document.querySelectorAll(".tab-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     document.querySelectorAll(".tab-btn").forEach(b => {
@@ -104,7 +87,6 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
   });
 });
 
-// ── Collapsibles ──────────────────────────────────────────────────
 document.querySelectorAll(".collapsible-header").forEach(header => {
   header.addEventListener("click", () => {
     const targetId = header.dataset.target;
@@ -115,7 +97,6 @@ document.querySelectorAll(".collapsible-header").forEach(header => {
   });
 });
 
-// ── Backend health ────────────────────────────────────────────────
 async function checkBackend() {
   try {
     const settings = await getSettings();
@@ -138,7 +119,6 @@ async function getSettings() {
   });
 }
 
-// ── Rendering ─────────────────────────────────────────────────────
 const RISK_CLASS = { Low: "risk-low", Moderate: "risk-moderate", Medium: "risk-medium", High: "risk-high", Critical: "risk-critical" };
 
 function renderResults(data, subject, body, sender, historyId) {
@@ -148,28 +128,23 @@ function renderResults(data, subject, body, sender, historyId) {
   const isSpam = data.prediction === "Spam";
   const risk   = data.risk_level || "Low";
 
-  // Verdict
   $verdictBanner.className = "verdict-banner " + (isSpam ? "spam" : "not-spam");
   $verdictIcon.textContent  = isSpam ? "🚨" : "✅";
   $verdictLabel.textContent = isSpam ? "Spam" : "Not Spam";
 
-  // Risk badge
   $riskBadge.textContent = risk;
   $riskBadge.className   = "risk-badge " + (RISK_CLASS[risk] || "risk-low");
 
-  // Sender display in banner
   $senderDisplay.textContent = data.sender_email
     ? "From: " + truncate(data.sender_email, 35)
     : "";
 
-  // Metrics
   $spamProb.textContent   = pct(data.spam_probability);
   $confidence.textContent = pct(data.confidence);
   $threatScore.textContent = data.threat_score + " / 100";
   $meterFill.style.width  = Math.min(data.threat_score, 100) + "%";
   $meterFill.setAttribute("data-level", risk.toLowerCase());
 
-  // Sender analysis
   const senderFlags = data.sender_flags || [];
   if (senderFlags.length > 0 || data.sender_score > 0) {
     $senderSection.classList.remove("hidden");
@@ -179,7 +154,7 @@ function renderResults(data, subject, body, sender, historyId) {
       ? senderFlags.map(f => `<li>${escHtml(f)}</li>`).join("")
       : "<li style='color:var(--text-muted)'>No reputation flags detected.</li>";
     if (senderFlags.length > 0) {
-      // Auto-expand sender section if there are flags
+
       const header = $senderSection.querySelector(".collapsible-header");
       const body2  = document.getElementById("sender-body");
       header.setAttribute("aria-expanded", "true");
@@ -189,7 +164,6 @@ function renderResults(data, subject, body, sender, historyId) {
     $senderSection.classList.add("hidden");
   }
 
-  // Keywords
   const keywords = data.suspicious_keywords || [];
   if (keywords.length > 0) {
     $keywordsSection.classList.remove("hidden");
@@ -201,7 +175,6 @@ function renderResults(data, subject, body, sender, historyId) {
     $keywordsSection.classList.add("hidden");
   }
 
-  // URLs
   const urls = data.urls || [];
   if (urls.length > 0) {
     $urlsSection.classList.remove("hidden");
@@ -211,13 +184,12 @@ function renderResults(data, subject, body, sender, historyId) {
     $urlsSection.classList.add("hidden");
   }
 
-  // Phishing patterns
   const phishingPatterns = data.phishing_patterns || [];
   if (phishingPatterns.length > 0) {
     $phishingSection.classList.remove("hidden");
     $phishingCount.textContent = phishingPatterns.length;
     $phishingList.innerHTML = phishingPatterns.map(renderPhishingPattern).join("");
-    // Auto-expand for High/Critical
+
     const topSeverity = phishingPatterns[0]?.severity;
     if (topSeverity === "High" || topSeverity === "Critical") {
       const hdr = $phishingSection.querySelector(".collapsible-header");
@@ -228,7 +200,6 @@ function renderResults(data, subject, body, sender, historyId) {
     $phishingSection.classList.add("hidden");
   }
 
-  // Explanation
   const explanation = data.explanation || [];
   if (explanation.length > 0) {
     $explainSection.classList.remove("hidden");
@@ -239,12 +210,10 @@ function renderResults(data, subject, body, sender, historyId) {
     $explainSection.classList.add("hidden");
   }
 
-  // Clean card
   const hasSignals = senderFlags.length > 0 || keywords.length > 0
     || urls.length > 0 || phishingPatterns.length > 0;
   $cleanCard.classList.toggle("hidden", hasSignals);
 
-  // Feedback
   $feedbackRow.classList.remove("hidden");
   $feedbackThanks.classList.add("hidden");
   $btnAgree.disabled = false;
@@ -285,7 +254,6 @@ function renderUrlItem(u) {
     </li>`;
 }
 
-// ── History ───────────────────────────────────────────────────────
 async function loadHistory() {
   const { history = [] } = await chrome.storage.local.get("history");
 
@@ -334,7 +302,6 @@ function renderHistoryItem(item) {
     </div>`;
 }
 
-// ── Analysis flow ─────────────────────────────────────────────────
 function runAnalysis() {
   showResultsState("loading");
 
@@ -347,7 +314,7 @@ function runAnalysis() {
       showError(response?.error || "Unknown error occurred.");
       return;
     }
-    // Store history id (the most recent entry)
+
     chrome.storage.local.get("history", ({ history = [] }) => {
       const id = history.length > 0 ? history[0].id : null;
       renderResults(response.data, response.subject, response.body, response.sender, id);
@@ -360,7 +327,6 @@ function showError(msg) {
   showResultsState("error");
 }
 
-// ── Feedback ──────────────────────────────────────────────────────
 function submitFeedback(type) {
   $btnAgree.disabled = true;
   $btnWrong.disabled = true;
@@ -374,7 +340,6 @@ function submitFeedback(type) {
 $btnAgree.addEventListener("click", () => submitFeedback("correct"));
 $btnWrong.addEventListener("click", () => submitFeedback("wrong"));
 
-// ── Copy report ───────────────────────────────────────────────────
 $btnCopy.addEventListener("click", () => {
   if (!currentResult) return;
   const { data, subject, sender } = currentResult;
@@ -416,19 +381,16 @@ $btnCopy.addEventListener("click", () => {
   });
 });
 
-// ── Clear history ─────────────────────────────────────────────────
 $btnClearHistory.addEventListener("click", async () => {
   await chrome.storage.local.set({ history: [] });
   $historyCount.classList.add("hidden");
   loadHistory();
 });
 
-// ── Settings ──────────────────────────────────────────────────────
 $btnSettings.addEventListener("click", () => {
   chrome.runtime.openOptionsPage();
 });
 
-// ── Utilities ─────────────────────────────────────────────────────
 function pct(val) {
   return val != null ? Math.round(val * 100) + "%" : "—";
 }
@@ -461,16 +423,13 @@ function highlightKeywords(text, keywords) {
   ).join("");
 }
 
-// ── Init ──────────────────────────────────────────────────────────
 async function init() {
-  // Check auto-scan badge
+
   const settings = await getSettings();
   if (settings.autoScan) $autoScanBadge.classList.remove("hidden");
 
-  // Backend health
   checkBackend();
 
-  // Load last result instantly from storage (if auto-scan ran)
   const { lastResult } = await chrome.storage.local.get("lastResult");
   if (lastResult && lastResult.result) {
     const { result, subject, body, sender } = lastResult;
@@ -478,7 +437,6 @@ async function init() {
     const id = history.length > 0 ? history[0].id : null;
     renderResults(result, subject, body, sender, id);
 
-    // Update history badge
     if (history.length > 0) {
       $historyCount.textContent = history.length;
       $historyCount.classList.remove("hidden");
@@ -488,7 +446,6 @@ async function init() {
   }
 }
 
-// ── Event bindings ────────────────────────────────────────────────
 $btnScanIdle.addEventListener("click", runAnalysis);
 $btnRetry.addEventListener("click", runAnalysis);
 $btnRescan.addEventListener("click", runAnalysis);

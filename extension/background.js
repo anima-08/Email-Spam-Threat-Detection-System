@@ -1,14 +1,3 @@
-/**
- * background.js — Manifest V3 service worker.
- *
- * Handles:
- *  - ANALYZE messages from popup (manual scan)
- *  - EMAIL_OPENED messages from content script (auto-scan)
- *  - Storing last result + scan history in chrome.storage.local
- *  - Browser notifications for High/Critical emails
- */
-
-// ── Config (inlined from config.js for MV3 service worker compatibility) ──
 const CONFIG = {
   BACKEND_URL: "http://localhost:5000",
   DEFAULTS: {
@@ -18,8 +7,6 @@ const CONFIG = {
   },
   MAX_HISTORY: 20,
 };
-
-// ── Helpers ───────────────────────────────────────────────────────
 
 async function getSettings() {
   const stored = await chrome.storage.sync.get(CONFIG.DEFAULTS);
@@ -47,7 +34,7 @@ async function getActiveEmailTab() {
 }
 
 function askContentScriptToExtract(tabId) {
-  // Helper: send the message and return a promise
+
   function trySend() {
     return new Promise((resolve, reject) => {
       chrome.tabs.sendMessage(tabId, { type: "EXTRACT_EMAIL" }, (response) => {
@@ -61,14 +48,14 @@ function askContentScriptToExtract(tabId) {
   }
 
   return trySend().catch(async (err) => {
-    // If the content script isn't present, inject it and retry once
+
     if (err.message && err.message.includes("Receiving end does not exist")) {
       try {
         await chrome.scripting.executeScript({
           target: { tabId },
           files: ["content.js"],
         });
-        // Give the script a moment to register its listener
+
         await new Promise((r) => setTimeout(r, 300));
         return trySend();
       } catch (injectErr) {
@@ -114,16 +101,12 @@ async function callBackend(subject, body, sender) {
   return response.json();
 }
 
-// ── History ───────────────────────────────────────────────────────
-
 async function appendToHistory(entry) {
   const { history = [] } = await chrome.storage.local.get("history");
   history.unshift(entry);               // newest first
   if (history.length > CONFIG.MAX_HISTORY) history.length = CONFIG.MAX_HISTORY;
   await chrome.storage.local.set({ history });
 }
-
-// ── Notifications ─────────────────────────────────────────────────
 
 function maybeNotify(settings, prediction, riskLevel, subject) {
   if (!settings.notifications) return;
@@ -141,8 +124,6 @@ function maybeNotify(settings, prediction, riskLevel, subject) {
   });
 }
 
-// ── Core analysis flow ────────────────────────────────────────────
-
 async function analyzeEmail(tabId) {
   const extraction = await askContentScriptToExtract(tabId);
 
@@ -157,11 +138,8 @@ async function analyzeEmail(tabId) {
   return { data, subject, body, sender };
 }
 
-// ── Message listener ──────────────────────────────────────────────
-
 chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
 
-  // ── Manual scan (from popup) ─────────────────────────────────────
   if (message.type === "ANALYZE") {
     (async () => {
       try {
@@ -170,16 +148,14 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
 
         const settings = await getSettings();
         const threshold = settings.spamThreshold ?? CONFIG.DEFAULTS.spamThreshold;
-        // Override label based on user's threshold preference
+
         const adjustedPrediction =
           data.spam_probability >= threshold ? "Spam" : "Ham";
 
         const result = { ...data, prediction: adjustedPrediction };
 
-        // Store last result for instant popup load
         await chrome.storage.local.set({ lastResult: { result, subject, body, sender, ts: Date.now() } });
 
-        // Append to history
         await appendToHistory({
           id: Date.now(),
           subject: subject || "(No subject)",
@@ -202,7 +178,6 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
     return true;
   }
 
-  // ── Auto-scan (email opened, triggered by content script) ────────
   if (message.type === "EMAIL_OPENED") {
     (async () => {
       try {
@@ -214,7 +189,6 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
         const isEmailTab = EMAIL_HOSTS.some(h => tab?.url?.startsWith(h));
         if (!tab || !isEmailTab) return;
 
-        // Small delay to let Gmail finish rendering the email
         await new Promise(r => setTimeout(r, 1000));
 
         const { data, subject, body, sender } = await analyzeEmail(tab.id);
@@ -239,38 +213,31 @@ chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
 
         maybeNotify(settings, adjustedPrediction, data.risk_level, subject);
 
-        // Update popup badge with risk color
         const badgeColors = { Low: "#22c55e", Medium: "#eab308", High: "#f97316", Critical: "#ef4444" };
         chrome.action.setBadgeText({ text: adjustedPrediction === "Spam" ? "!" : "" });
         chrome.action.setBadgeBackgroundColor({ color: badgeColors[data.risk_level] || "#6366f1" });
 
       } catch (_) {
-        // Auto-scan failures are silent — don't disturb the user
+
       }
     })();
     return false;
   }
 
-  // ── Save feedback + send to backend for continual learning ──────────
   if (message.type === "SAVE_FEEDBACK") {
     (async () => {
       const { id, feedback } = message;
 
-      // 1. Update local history record
       const { history = [] } = await chrome.storage.local.get("history");
       const idx = history.findIndex(h => h.id === id);
       if (idx !== -1) history[idx].feedback = feedback;
       await chrome.storage.local.set({ history });
 
-      // 2. Forward correction to the backend for continual learning
       try {
         const { lastResult } = await chrome.storage.local.get("lastResult");
         if (lastResult) {
           const { subject, body, sender, result } = lastResult;
 
-          // Derive the correct label:
-          //   "correct" → the model's prediction was right → use it as-is
-          //   "wrong"   → the model was wrong → flip the label
           const modelPrediction = result?.prediction ?? "Ham";
           let correctLabel;
           if (feedback === "correct") {

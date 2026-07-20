@@ -1,27 +1,12 @@
-/**
- * content.js — Injected into Gmail AND Outlook Web tabs.
- *
- * Responsibilities:
- *  1. Detect which email client is active (Gmail / Outlook)
- *  2. Respond to EXTRACT_EMAIL messages from the background service worker
- *  3. Watch the DOM for new email opens (MutationObserver) and notify
- *     background so it can auto-scan
- *
- * Both Gmail and Outlook use dynamic SPAs, so multiple fallback selectors
- * are tried for each field. On failure a structured error is returned.
- */
-
 (function () {
   "use strict";
 
-  // ── Platform detection ───────────────────────────────────────────
   const HOST = location.hostname;
   const IS_GMAIL   = HOST === "mail.google.com";
   const IS_OUTLOOK = HOST === "outlook.live.com"
                   || HOST === "outlook.office.com"
                   || HOST === "outlook.office365.com";
 
-  // ── Gmail selectors ───────────────────────────────────────────────
   const GMAIL_SUBJECT = [
     "h2.hP",
     ".hP",
@@ -39,32 +24,29 @@
   const GMAIL_SENDER_EMAIL = [".gD", "[data-hovercard-id]"];
   const GMAIL_SENDER_NAME  = [".go", ".gD"];
 
-  // ── Outlook Web selectors ─────────────────────────────────────────
-  // Outlook Web is a React SPA — aria-label / role attributes are the
-  // most stable hooks across Outlook's frequent UI updates.
   const OUTLOOK_SUBJECT = [
-    // New Outlook (2023+)
+
     "[data-testid='ConversationCard-subject']",
     "div[role='heading'][aria-level='1']",
     "span[role='heading']",
-    // OWA / Outlook 365
+
     "div.allowTextSelection[aria-label]",
     "[aria-label='Message subject']",
-    // Fallback: first heading in reading pane
+
     "[aria-label='Reading Pane'] h1",
     "[aria-label='Reading Pane'] h2",
-    // Generic: look for subject-like role headings
+
     "h1[tabindex]",
     "h2[tabindex]",
   ];
   const OUTLOOK_BODY = [
-    // Reading pane document body
+
     "[role='document']",
     "div[aria-label='Message body']",
-    // OWA
+
     ".ReadingPaneContent div[role='document']",
     ".customScrollBar [role='document']",
-    // Broader fallback
+
     "[aria-label='Reading Pane'] [role='document']",
     "[aria-label='Reading Pane'] div[dir]",
   ];
@@ -76,7 +58,6 @@
     "span[title*='@']",
   ];
 
-  // ── Helpers ───────────────────────────────────────────────────────
   function trySelectors(selectors) {
     for (const sel of selectors) {
       try {
@@ -90,7 +71,6 @@
     return null;
   }
 
-  // ── Gmail extractors ──────────────────────────────────────────────
   function gmailSubject() {
     const fromDOM = trySelectors(GMAIL_SUBJECT);
     if (fromDOM) return fromDOM;
@@ -117,11 +97,10 @@
     return trySelectors(GMAIL_SENDER_NAME) || "";
   }
 
-  // ── Outlook extractors ────────────────────────────────────────────
   function outlookSubject() {
     const fromDOM = trySelectors(OUTLOOK_SUBJECT);
     if (fromDOM) return fromDOM;
-    // Fallback: strip "- Outlook" or "| Outlook" from page title
+
     return document.title
       .replace(/\s*[-–|]\s*Outlook\s*$/i, "")
       .replace(/\s*[-–|]\s*Microsoft Outlook\s*$/i, "")
@@ -133,7 +112,7 @@
   }
 
   function outlookSender() {
-    // Try aria-label based sender buttons (most reliable)
+
     for (const sel of OUTLOOK_SENDER) {
       try {
         const el = document.querySelector(sel);
@@ -142,7 +121,7 @@
                      || el.getAttribute("title")
                      || el.innerText || "";
           if (label.includes("@") || label.toLowerCase().startsWith("from")) {
-            // Strip "From: " prefix if present
+
             return label.replace(/^from[:\s]*/i, "").trim();
           }
         }
@@ -151,7 +130,6 @@
     return "";
   }
 
-  // ── Dispatch to correct platform ──────────────────────────────────
   function extractEmail() {
     if (IS_GMAIL) {
       return {
@@ -170,7 +148,6 @@
     return { subject: null, body: null, sender: "" };
   }
 
-  // ── Message listener (from background.js) ───────────────────────
   chrome.runtime.onMessage.addListener(function (message, _sender, sendResponse) {
     if (message.type !== "EXTRACT_EMAIL") return;
 
@@ -199,10 +176,6 @@
     return true;
   });
 
-  // ── MutationObserver — detect when a new email opens ─────────────
-  // Both Gmail and Outlook use pushState navigation.
-  // We detect email changes by watching for subject changes.
-
   let lastSubject = "";
   let debounceTimer = null;
 
@@ -221,7 +194,6 @@
 
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // Also poll URL changes (both Gmail and Outlook use pushState/replaceState)
   let lastHref = location.href;
   setInterval(() => {
     if (location.href !== lastHref) {
